@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhaleWorld Rune Builder</title>
+<style>
+:root{--bg:#0f172a;--panel:#111827;--panel2:#1f2937;--line:#334155;--text:#e5eefb;--muted:#94a3b8;--accent:#38bdf8;--normal:#9ca3af;--fine:#4ade80;--rare:#60a5fa;--epic:#a78bfa;--legendary:#facc15;--mythic:#fb7185}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}.hero{padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--panel);margin-bottom:14px}.sub{color:var(--muted);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden}.head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.body{padding:14px}.slot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.slot{padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel2)}.label{font-size:12px;color:var(--muted);margin-bottom:4px}.title{font-weight:800;margin-bottom:8px}
+select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--text);margin-bottom:8px}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:700}
+.Normal{color:var(--normal)} .Fine{color:var(--fine)} .Rare{color:var(--rare)} .Epic{color:var(--epic)} .Legendary{color:var(--legendary)} .Mythic{color:var(--mythic)}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.item{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);margin-bottom:8px}.small{font-size:12px;color:var(--muted)}
+@media (max-width:900px){.grid,.slot-grid,.summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>WhaleWorld Rune Builder</h1>
+    <div class="sub">Flow is now exactly: Rune > Quality > Enchant. The enchant dropdown only shows rune-specific enchants for that quality plus the shared category enchants like boss/minion lines.</div>
+  </div>
+  <div class="grid" id="sections"></div>
+  <div class="summary">
+    <div class="panel"><div class="head"><h3>Selected Enchants</h3><div class="small" id="selectedCount">0 chosen</div></div><div class="body" id="selected"></div></div>
+    <div class="panel"><div class="head"><h3>Total Benefit</h3><div class="small">Stacked stats + separate effects</div></div><div class="body"><div id="totals"></div><div style="height:8px"></div><div id="effects"></div></div></div>
+  </div>
+</div>
+<script>
+const DATA = {"slotOrder": [["Enhancement", 4], ["Ability", 4], ["Blessing", 2], ["Etched", 3]], "runes": {"Blessing": ["Revive", "Lucky Shadow", "Intelligence", "Rabbit's Foot", "Guardian", "Devil Pact", "Resilience"], "Enhancement": ["Sharp Arrow", "Flamenox Seal", "Frostshock Seal", "Spin SPD Up", "Sawblade Circle", "Giant Meteor", "Potion Magnet", "Sprite Multishot", "Sprite Link", "Dragonflight Sword", "Ricochet Strike", "Rootguard", "Vine Bind"], "Ability": ["Arrow Rain", "Flamenox Touch", "Frostshock Touch", "Ring of Agony", "Circle", "Star of Fury", "Star of Time", "Healing Sprite", "Melee Sprite", "Sword of Time", "Strike Potion", "Plant Summon", "Equinox Bloom"], "Etched": ["Arrow Of Echoes", "Elemental Domain", "Pulsing Orb", "Meteor Split", "Sprite's Awe", "Sword Strike Split", "Sprite Assist", "Sword Strike Aerie", "Potion Spring", "Elemental Crit", "Life Surge", "Orbital Orb", "Echo Scythe"]}, "qualities": ["Normal", "Fine", "Rare", "Epic", "Legendary", "Mythic"], "shared": {"Blessing": {"Normal": ["ATK PWR+10", "Max HP+40"], "Fine": ["ATK PWR+20", "Max HP+80", "Reduced Circle DMG taken+0.5%", "Reduced Sword Strike DMG taken+0.5%", "Reduced Sprite DMG taken+0.5%", "Reduced Main Weapon DMG taken+0.5%", "Reduced Meteor DMG taken+0.5%", "Reduced Elemental DMG taken+0.5%"], "Rare": ["ATK PWR+40", "Max HP+160", "Reduced Circle DMG taken+1%", "Reduced Sword Strike DMG taken+1%", "Reduced Sprite DMG taken+1%", "Reduced Main Weapon DMG taken+1%", "Reduced Meteor DMG taken+1%", "Reduced Elemental DMG taken+1%"], "Epic": ["ATK PWR+120", "Max HP+480", "Reduced Circle DMG taken+3%", "Reduced Sword Strike DMG taken+3%", "Reduced Sprite DMG taken+3%", "Reduced Main Weapon DMG taken+3%", "Reduced Meteor DMG taken+3%", "Reduced Elemental DMG taken+3%"], "Legendary": ["Reduced Circle DMG taken+7.5%", "Reduced Sword Strike DMG taken+7.5%", "Reduced Sprite DMG taken+7.5%", "Reduced Main Weapon DMG taken+7.5%", "Reduced Meteor DMG taken+7.5%", "Reduced Elemental DMG taken+7.5%"], "Mythic": ["Reduced Circle DMG taken+15%", "Reduced Sword Strike DMG taken+15%", "Reduced Sprite DMG taken+15%", "Reduced Main Weapon DMG taken+15%", "Reduced Meteor DMG taken+15%", "Reduced Elemental DMG taken+15%"]}, "Enhancement": {"Normal": ["ATK PWR+10"], "Fine": ["ATK PWR+20", "Boss DMG+0.3%", "More damage VS minions+0.3%"], "Rare": ["ATK PWR+40", "Boss DMG+0.5%", "More damage VS minions+0.5%"], "Epic": ["ATK PWR+120", "Boss DMG+2%", "More damage VS minions+2%", "CRIT DMG+4%"], "Legendary": ["Boss DMG+7.5%", "More damage VS minions+7.5%", "CRIT DMG+15%"], "Mythic": ["Boss DMG+15%", "More damage VS minions+15%", "CRIT DMG+30%"]}, "Ability": {"Normal": ["Max HP+40"], "Fine": ["Max HP+80", "Boss DMG REDUC+0.3%", "Minion DMG REDUC+0.3%"], "Rare": ["Max HP+160", "Boss DMG REDUC+0.5%", "Minion DMG REDUC+0.5%"], "Epic": ["Max HP+480", "Boss DMG REDUC+2%", "Minion DMG REDUC+2%", "CRIT DMG REDUC+4%"], "Legendary": ["Boss DMG REDUC+7.5%", "Minion DMG REDUC+7.5%", "CRIT DMG REDUC+15%"], "Mythic": ["Boss DMG REDUC+15%", "Minion DMG REDUC+15%", "CRIT DMG REDUC+30%"]}}, "specific": {"Blessing": {"Revive": {"Legendary": ["Upon revival, ATK SPD +15% for 10s"], "Mythic": ["Upon revival, ATK SPD +30%, and main weapon hits restore 1.5% HP. Lasts 10s"]}, "Intelligence": {"Legendary": ["In-battle skill refreshes +1"], "Mythic": ["In-battle skill refreshes +2, Max level +1"]}, "Guardian": {"Legendary": ["When HP drop below 50% for the first time, gain a shield that blocks 1 attack"], "Mythic": ["When HP drop below 50% for the first 2 times, gain a shield that blocks 1 attack"]}, "Devil Pact": {"Legendary": ["Max HP lost when selecting Devil skills becomes direct HP lost"], "Mythic": ["Max HP lost when selecting Devil skills becomes direct HP lost. Also +5% for every Devil skill selected (Max 3 stacks)"]}, "Rabbit's Foot": {"Legendary": ["For each Epic or higher skill gained, ATK and HP +2% (Max 5 stacks)"], "Mythic": ["For each Epic or higher skill gained, ATK and HP +5% (Max 5 stacks)"]}, "Resilience": {"Legendary": ["10% CRIT DMG is converted to 25% CRIT DMG Reduction"], "Mythic": ["10% CRIT DMG is converted to 50% CRIT DMG Reduction"]}, "Lucky Shadow": {"Legendary": ["DMG taken from monster collisions -15%"], "Mythic": ["DMG taken from monster collisions -30%"]}}, "Enhancement": {"Sharp Arrow": {"Normal": ["Main Weapon DMG+40"], "Fine": ["Main Weapon DMG+80"], "Rare": ["Main Weapon DMG+160", "Main Weapon CRIT Rate+2%"], "Epic": ["Main Weapon DMG+480", "Main Weapon CRIT Rate+6%"], "Legendary": ["Main Weapon DMG+15%", "Main Weapon CRIT Rate+15%", "Main Weapon bounces +2"], "Mythic": ["Main Weapon DMG+30%", "Main Weapon CRIT Rate+30%", "Main Weapon bounces +4"]}, "Flamenox Seal": {"Normal": ["Elemental DMG+40"], "Fine": ["Elemental DMG+80"], "Rare": ["Elemental DMG+160", "Elemental CRIT Rate+2%"], "Epic": ["Elemental DMG+480", "Elemental CRIT Rate+6%"], "Legendary": ["Elemental DMG+15%", "Elemental CRIT Rate+15%", "When attacking Burning, Poisoned targets, CRIT Rate +7.5%, CRIT DMG +15%"], "Mythic": ["Elemental DMG+30%", "Elemental CRIT Rate+30%", "When attacking Burning, Poisoned targets, CRIT Rate +15%, CRIT DMG +30%"]}, "Frostshock Seal": {"Normal": ["Elemental DMG+40"], "Fine": ["Elemental DMG+80"], "Rare": ["Elemental DMG+160", "Elemental CRIT Rate+2%"], "Epic": ["Elemental DMG+480", "Elemental CRIT Rate+6%"], "Legendary": ["Elemental DMG+15%", "Elemental CRIT Rate+15%", "When attacking Paralyzed, Frozen targets, CRIT Rate +17.5%, CRIT DMG +35%"], "Mythic": ["Elemental DMG+30%", "Elemental CRIT Rate+30%", "When attacking Paralyzed, Frozen targets, CRIT Rate +35%, CRIT DMG +70%"]}, "Spin SPD Up": {"Normal": ["Circle DMG+40"], "Fine": ["Circle DMG+80"], "Rare": ["Circle DMG+160", "Circle CRIT Rate+2%"], "Epic": ["Circle DMG+480", "Circle CRIT Rate+6%"], "Legendary": ["Circle DMG+15%", "Circle CRIT Rate+15%", "Circle copy trajectory chance"], "Mythic": ["Circle DMG+30%", "Circle CRIT Rate+30%", "High Circle copy trajectory chance"]}, "Sawblade Circle": {"Normal": ["Circle DMG+40"], "Fine": ["Circle DMG+80"], "Rare": ["Circle DMG+160", "Circle CRIT Rate+2%"], "Epic": ["Circle DMG+480", "Circle CRIT Rate+6%"], "Legendary": ["Circle DMG+15%", "Circle CRIT Rate+15%", "Additional Sawblade center DMG +25%"], "Mythic": ["Circle DMG+30%", "Circle CRIT Rate+30%", "Additional Sawblade center DMG +50%"]}, "Giant Meteor": {"Normal": ["Meteor DMG+40"], "Fine": ["Meteor DMG+80"], "Rare": ["Meteor DMG+160", "Meteor CRIT Rate+2%"], "Epic": ["Meteor DMG+480", "Meteor CRIT Rate+6%"], "Legendary": ["Meteor DMG+15%", "Meteor CRIT Rate+15%", "Meteor and Meteor Potion CD -25%"], "Mythic": ["Meteor DMG+30%", "Meteor CRIT Rate+30%", "Meteor and Meteor Potion CD -50%"]}, "Potion Magnet": {"Normal": ["Meteor DMG+40"], "Fine": ["Meteor DMG+80"], "Rare": ["Meteor DMG+160", "Meteor CRIT Rate+2%"], "Epic": ["Meteor DMG+480", "Meteor CRIT Rate+6%"], "Legendary": ["Meteor DMG+15%", "Meteor CRIT Rate+15%", "Spawn extra Meteor Potion chance"], "Mythic": ["Meteor DMG+30%", "Meteor CRIT Rate+30%", "High chance to spawn extra Meteor Potion"]}, "Sprite Multishot": {"Normal": ["Sprite DMG+40"], "Fine": ["Sprite DMG+80"], "Rare": ["Sprite DMG+160", "Sprite CRIT Rate+2%"], "Epic": ["Sprite DMG+480", "Sprite CRIT Rate+6%"], "Legendary": ["Sprite DMG+15%", "Sprite CRIT Rate+15%", "Projectile barrage chance"], "Mythic": ["Sprite DMG+30%", "Sprite CRIT Rate+30%", "Projectile barrage"]}, "Sprite Link": {"Normal": ["Sprite DMG+40"], "Fine": ["Sprite DMG+80"], "Rare": ["Sprite DMG+160", "Sprite CRIT Rate+2%"], "Epic": ["Sprite DMG+480", "Sprite CRIT Rate+6%"], "Legendary": ["Sprite DMG+15%", "Sprite CRIT Rate+15%", "All Sprites ATK SPD +10% per extra Sprite"], "Mythic": ["Sprite DMG+30%", "Sprite CRIT Rate+30%", "All Sprites ATK SPD +20% per extra Sprite"]}, "Dragonflight Sword": {"Normal": ["Strike DMG+40"], "Fine": ["Strike DMG+80"], "Rare": ["Strike DMG+160", "Strike CRIT Rate+2%"], "Epic": ["Strike DMG+480", "Strike CRIT Rate+6%"], "Legendary": ["Strike DMG+15%", "Strike CRIT Rate+15%", "Warfire Dragon chance"], "Mythic": ["Strike DMG+30%", "Strike CRIT Rate+30%", "High Warfire Dragon chance"]}, "Ricochet Strike": {"Normal": ["Strike DMG+40"], "Fine": ["Strike DMG+80"], "Rare": ["Strike DMG+160", "Strike CRIT Rate+2%"], "Epic": ["Strike DMG+480", "Strike CRIT Rate+6%"], "Legendary": ["Strike DMG+15%", "Strike CRIT Rate+15%", "Strike Bounce +2"], "Mythic": ["Strike DMG+30%", "Strike CRIT Rate+30%", "Strike Bounce +4"]}, "Rootguard": {"Normal": ["Plant DMG+40"], "Fine": ["Plant DMG+80"], "Rare": ["Plant DMG+160", "Plant CRIT Rate+2%"], "Epic": ["Plant DMG+480", "Plant CRIT Rate+6%"], "Legendary": ["Plant DMG+15%", "Plant CRIT Rate+15%", "Fatal damage negate once"], "Mythic": ["Plant DMG+30%", "Plant CRIT Rate+30%", "Fatal damage negate up to 3 times"]}, "Vine Bind": {"Normal": ["Plant DMG+40"], "Fine": ["Plant DMG+80"], "Rare": ["Plant DMG+160", "Plant CRIT Rate+2%"], "Epic": ["Plant DMG+480", "Plant CRIT Rate+6%"], "Legendary": ["Plant DMG+15%", "Plant CRIT Rate+15%", "Plant DOT and slow"], "Mythic": ["Plant DMG+30%", "Plant CRIT Rate+30%", "Plant DOT, slow, small Root chance"]}}, "Ability": {"Arrow Rain": {"Normal": ["Main Weapon DMG+40"], "Fine": ["Main Weapon DMG+80"], "Rare": ["Main Weapon DMG+160", "Main Weapon CRIT DMG+2%"], "Epic": ["Main Weapon DMG+480", "Main Weapon CRIT DMG+6%"], "Legendary": ["Main Weapon DMG+15%", "Main Weapon CRIT DMG+15%", "Weaken chance for 2s"], "Mythic": ["Main Weapon DMG+30%", "Main Weapon CRIT DMG+30%", "Weaken for 2s"]}, "Flamenox Touch": {"Normal": ["Elemental DMG+40"], "Fine": ["Elemental DMG+80"], "Rare": ["Elemental DMG+160", "Elemental CRIT DMG+2%"], "Epic": ["Elemental DMG+480", "Elemental CRIT DMG+6%"], "Legendary": ["Elemental DMG+15%", "Elemental CRIT DMG+15%", "Meteor chance on trigger"], "Mythic": ["Elemental DMG+30%", "Elemental CRIT DMG+30%", "Meteor on trigger"]}, "Frostshock Touch": {"Normal": ["Elemental DMG+40"], "Fine": ["Elemental DMG+80"], "Rare": ["Elemental DMG+160", "Elemental CRIT DMG+2%"], "Epic": ["Elemental DMG+480", "Elemental CRIT DMG+6%"], "Legendary": ["Elemental DMG+15%", "Elemental CRIT DMG+15%", "1-3 Strikes chance on trigger"], "Mythic": ["Elemental DMG+30%", "Elemental CRIT DMG+30%", "1-3 Strikes on trigger"]}, "Ring of Agony": {"Normal": ["Circle DMG+40"], "Fine": ["Circle DMG+80"], "Rare": ["Circle DMG+160", "Circle CRIT DMG+2%"], "Epic": ["Circle DMG+480", "Circle CRIT DMG+6%"], "Legendary": ["Circle DMG+15%", "Circle CRIT DMG+15%", "Enemies -10% ATK inside ring"], "Mythic": ["Circle DMG+30%", "Circle CRIT DMG+30%", "Enemies -20% ATK inside ring"]}, "Circle": {"Normal": ["Circle DMG+40"], "Fine": ["Circle DMG+80"], "Rare": ["Circle DMG+160", "Circle CRIT DMG+2%"], "Epic": ["Circle DMG+480", "Circle CRIT DMG+6%"], "Legendary": ["Circle DMG+15%", "Circle CRIT DMG+15%", "Shield chance"], "Mythic": ["Circle DMG+30%", "Circle CRIT DMG+30%", "Higher shield chance"]}, "Star of Fury": {"Normal": ["Meteor DMG+40"], "Fine": ["Meteor DMG+80"], "Rare": ["Meteor DMG+160", "Meteor CRIT DMG+2%"], "Epic": ["Meteor DMG+480", "Meteor CRIT DMG+6%"], "Legendary": ["Meteor DMG+15%", "Meteor CRIT DMG+15%", "Huge Meteor chance"], "Mythic": ["Meteor DMG+30%", "Meteor CRIT DMG+30%", "Huge Meteors"]}, "Star of Time": {"Normal": ["Meteor DMG+40"], "Fine": ["Meteor DMG+80"], "Rare": ["Meteor DMG+160", "Meteor CRIT DMG+2%"], "Epic": ["Meteor DMG+480", "Meteor CRIT DMG+6%"], "Legendary": ["Meteor DMG+15%", "Meteor CRIT DMG+15%", "CRIT Rate up and 1-3 Strikes chance"], "Mythic": ["Meteor DMG+30%", "Meteor CRIT DMG+30%", "Big CRIT Rate up and 1-3 Strikes"]}, "Healing Sprite": {"Normal": ["Sprite DMG+40"], "Fine": ["Sprite DMG+80"], "Rare": ["Sprite DMG+160", "Sprite CRIT DMG+2%"], "Epic": ["Sprite DMG+480", "Sprite CRIT DMG+6%"], "Legendary": ["Sprite DMG+15%", "Sprite CRIT DMG+15%", "Higher CRIT Rate at full HP"], "Mythic": ["Sprite DMG+30%", "Sprite CRIT DMG+30%", "Greatly higher CRIT Rate at full HP"]}, "Melee Sprite": {"Normal": ["Sprite DMG+40"], "Fine": ["Sprite DMG+80"], "Rare": ["Sprite DMG+160", "Sprite CRIT DMG+2%"], "Epic": ["Sprite DMG+480", "Sprite CRIT DMG+6%"], "Legendary": ["Sprite DMG+15%", "Sprite CRIT DMG+15%", "Heal chance when not full HP"], "Mythic": ["Sprite DMG+30%", "Sprite CRIT DMG+30%", "Heals when not full HP"]}, "Sword of Time": {"Normal": ["Strike DMG+40"], "Fine": ["Strike DMG+80"], "Rare": ["Strike DMG+160", "Strike CRIT DMG+2%"], "Epic": ["Strike DMG+480", "Strike CRIT DMG+6%"], "Legendary": ["Strike DMG+15%", "Strike CRIT DMG+15%", "Random elements and Meteor chance"], "Mythic": ["Strike DMG+30%", "Strike CRIT DMG+30%", "Random elements and Meteor cast"]}, "Strike Potion": {"Normal": ["Strike DMG+40"], "Fine": ["Strike DMG+80"], "Rare": ["Strike DMG+160", "Strike CRIT DMG+2%"], "Epic": ["Strike DMG+480", "Strike CRIT DMG+6%"], "Legendary": ["Strike DMG+15%", "Strike CRIT DMG+15%", "Invincibility Potion chance"], "Mythic": ["Strike DMG+30%", "Strike CRIT DMG+30%", "Higher Invincibility Potion chance"]}, "Plant Summon": {"Normal": ["Plant DMG+40"], "Fine": ["Plant DMG+80"], "Rare": ["Plant DMG+160", "Plant CRIT DMG+2%"], "Epic": ["Plant DMG+480", "Plant CRIT DMG+6%"], "Legendary": ["Plant DMG+15%", "Plant CRIT DMG+15%", "Summons 1 Plant Guardian"], "Mythic": ["Plant DMG+30%", "Plant CRIT DMG+30%", "Summons 2 Plant Guardians"]}, "Equinox Bloom": {"Normal": ["Plant DMG+40"], "Fine": ["Plant DMG+80"], "Rare": ["Plant DMG+160", "Plant CRIT DMG+2%"], "Epic": ["Plant DMG+480", "Plant CRIT DMG+6%"], "Legendary": ["Plant DMG+15%", "Plant CRIT DMG+15%", "0.3% HP restore chance"], "Mythic": ["Plant DMG+30%", "Plant CRIT DMG+30%", "0.6% HP restore chance and next attack crit"]}}}};
+const state = {slots:[]};
+
+function init(){
+  for(const [type,count] of DATA.slotOrder){
+    for(let i=1;i<=count;i++){
+      state.slots.push({id:`${type}-${i}`, type, index:i, rune:"", quality:"", enchant:""});
+    }
+  }
+  render();
+}
+function getSlot(id){ return state.slots.find(s=>s.id===id); }
+function uniq(a){ return [...new Set(a)]; }
+function getEnchantOptions(type,rune,quality){
+  if(type==="Etched" || !rune || !quality) return [];
+  const shared=((DATA.shared[type]||{})[quality]||[]);
+  const specific=((((DATA.specific[type]||{})[rune]||{})[quality])||[]);
+  return uniq([...shared, ...specific]);
+}
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function render(){
+  const sections=document.getElementById("sections");
+  sections.innerHTML="";
+  for(const [type,count] of DATA.slotOrder){
+    const panel=document.createElement("div");
+    panel.className="panel";
+    panel.innerHTML=`<div class="head"><h3>${type} (${count})</h3><div class="small">Rune > Quality > Enchant</div></div><div class="body"><div class="slot-grid" id="wrap-${type}"></div></div>`;
+    sections.appendChild(panel);
+    const wrap=panel.querySelector(`#wrap-${type}`);
+    state.slots.filter(s=>s.type===type).forEach(slot=>{
+      const runeOptions=['<option value="">Select rune</option>', ...DATA.runes[type].map(r=>`<option value="${esc(r)}" ${slot.rune===r?'selected':''}>${esc(r)}</option>`)].join("");
+      const qualityOptions=['<option value="">Select quality</option>', ...DATA.qualities.map(q=>`<option value="${q}" ${slot.quality===q?'selected':''}>${q}</option>`)].join("");
+      const enchants=getEnchantOptions(type, slot.rune, slot.quality);
+      const enchantOptions=['<option value="">Select enchant</option>', ...enchants.map(e=>`<option value="${esc(e)}" ${slot.enchant===e?'selected':''}>${esc(e)}</option>`)].join("");
+      const slotDiv=document.createElement("div");
+      slotDiv.className="slot";
+      slotDiv.innerHTML=`
+        <div class="title">${type} ${slot.index}</div>
+        <div class="label">Rune</div>
+        <select data-kind="rune" data-id="${slot.id}">${runeOptions}</select>
+        <div class="label">Quality</div>
+        <select data-kind="quality" data-id="${slot.id}">${qualityOptions}</select>
+        <div class="label">Enchant</div>
+        ${type==="Etched"
+          ? `<div class="small">Etched has no separate enchant table in this build.</div>`
+          : `<select data-kind="enchant" data-id="${slot.id}" ${(slot.rune && slot.quality)?'':'disabled'}>${enchantOptions}</select>
+             <div class="small">${slot.rune && slot.quality ? 'Filtered to shared + rune-specific enchants for this quality.' : 'Pick rune and quality first.'}</div>`}
+        ${slot.quality ? `<div style="margin-top:8px"><span class="pill ${slot.quality}">${slot.quality}</span></div>`:''}
+      `;
+      wrap.appendChild(slotDiv);
+    });
+  }
+
+  document.querySelectorAll("select[data-kind='rune']").forEach(sel=>sel.onchange=e=>{
+    const slot=getSlot(e.target.dataset.id);
+    slot.rune=e.target.value;
+    slot.enchant="";
+    render();
+  });
+  document.querySelectorAll("select[data-kind='quality']").forEach(sel=>sel.onchange=e=>{
+    const slot=getSlot(e.target.dataset.id);
+    slot.quality=e.target.value;
+    slot.enchant="";
+    render();
+  });
+  document.querySelectorAll("select[data-kind='enchant']").forEach(sel=>sel.onchange=e=>{
+    const slot=getSlot(e.target.dataset.id);
+    slot.enchant=e.target.value;
+    renderSummary();
+  });
+
+  renderSummary();
+}
+function parseNumeric(text){
+  const out=[];
+  if(!text) return out;
+  for(const part of text.split(",").map(x=>x.trim()).filter(Boolean)){
+    let m=part.match(/^(.*?)([+-]\d+(?:\.\d+)?%?)\b/);
+    if(m){
+      const label=m[1].trim().replace(/[:\-]+$/,'').trim();
+      if(label) out.push({label,value:m[2],raw:part});
+      continue;
+    }
+    let c=part.match(/to\s+([+-]?\d+(?:\.\d+)?%?)\s+(.+)$/i);
+    if(c) out.push({label:c[2].trim(),value:c[1],raw:part});
+  }
+  return out;
+}
+function nval(v){const n=parseFloat(String(v).replace("%","")); return isNaN(n)?0:n}
+function suf(v){return String(v).includes("%")?"%":""}
+function renderSummary(){
+  const selected=state.slots.filter(s=>s.enchant);
+  document.getElementById("selectedCount").textContent=`${selected.length} chosen`;
+  document.getElementById("selected").innerHTML = selected.length
+    ? selected.map(s=>`<div class="item"><strong>${s.type} ${s.index}</strong><div class="small">${esc(s.rune)} • ${esc(s.quality)}</div><div style="margin-top:6px">${esc(s.enchant)}</div></div>`).join("")
+    : `<div class="item">No enchants selected yet.</div>`;
+
+  const totals={}, effects=[];
+  selected.forEach(s=>{
+    const parts=parseNumeric(s.enchant);
+    if(!parts.length){effects.push({slot:`${s.type} ${s.index}`, text:s.enchant, quality:s.quality}); return;}
+    parts.forEach(p=>{
+      if(!totals[p.label]) totals[p.label]={label:p.label,val:0,suffix:suf(p.value)};
+      totals[p.label].val += nval(p.value);
+    });
+  });
+
+  const totalRows=Object.values(totals).sort((a,b)=>a.label.localeCompare(b.label));
+  document.getElementById("totals").innerHTML = totalRows.length
+    ? totalRows.map(t=>`<div class="item"><strong>${esc(t.label)}</strong><div class="small">+${Number.isInteger(t.val)?t.val:t.val.toFixed(1)}${t.suffix}</div></div>`).join("")
+    : `<div class="item">No stacked numeric totals yet.</div>`;
+
+  document.getElementById("effects").innerHTML = effects.length
+    ? effects.map(e=>`<div class="item"><strong>${esc(e.slot)}</strong><div>${esc(e.text)}</div><div style="margin-top:6px"><span class="pill ${e.quality||'Normal'}">${esc(e.quality||'Normal')}</span></div></div>`).join("")
+    : `<div class="item">No separate effects yet.</div>`;
+}
+init();
+</script>
+</body></html>
